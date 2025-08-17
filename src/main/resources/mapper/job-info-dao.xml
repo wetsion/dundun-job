@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="site.wetsion.framework.dundunjob.datasource.mysql.dao.JobInfoDao">
+    <select id="getById" resultType="site.wetsion.framework.dundunjob.datasource.JobInfo">
+        SELECT * FROM job_info WHERE id = #{id}
+    </select>
+    <select id="getAll" resultType="site.wetsion.framework.dundunjob.datasource.JobInfo">
+        SELECT * FROM job_info
+    </select>
+</mapper>
