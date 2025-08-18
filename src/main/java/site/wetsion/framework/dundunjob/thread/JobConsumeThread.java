@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import site.wetsion.framework.dundunjob.datasource.JobInfo;
-import site.wetsion.framework.dundunjob.datasource.JobInfoLoader;
+import site.wetsion.framework.dundunjob.datasource.JobInfoDatasource;
 import site.wetsion.framework.dundunjob.executor.JobConsumeExecutor;
 import site.wetsion.framework.dundunjob.store.JobStore;
 
@@ -28,7 +28,7 @@ public class JobConsumeThread {
     @Autowired
     private JobStore jobStore;
     @Autowired
-    private JobInfoLoader jobInfoLoader;
+    private JobInfoDatasource jobInfoDatasource;
     @Autowired
     private JobConsumeExecutor jobConsumeExecutor;
 
@@ -38,6 +38,7 @@ public class JobConsumeThread {
     }
 
     public void start() {
+        jobConsumeExecutor.start();
         executorService.scheduleAtFixedRate(this::consumeJob, 0, 1000, TimeUnit.MILLISECONDS);
     }
 
@@ -47,11 +48,19 @@ public class JobConsumeThread {
     }
 
     private void consumeJob() {
-        Long jobId = jobStore.consumeJobFromQueue();
+        log.debug("开始消费任务");
+        Long jobId = null;
+        try {
+            jobId = jobStore.consumeJobFromQueue(200L, TimeUnit.MICROSECONDS);
+        } catch (Exception e) {
+            log.error("获取任务失败", e);
+            return;
+        }
         if (Objects.isNull(jobId)) {
             return;
         }
-        JobInfo jobInfo = jobInfoLoader.loadJobInfo(jobId);
+        log.debug("开始获取任务详情, jobId: {}", jobId);
+        JobInfo jobInfo = jobInfoDatasource.loadJobInfo(jobId);
         if (Objects.isNull(jobInfo)) {
             log.error("任务不存在, jobId: {}", jobId);
             return;

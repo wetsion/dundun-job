@@ -1,15 +1,17 @@
 package site.wetsion.framework.dundunjob.datasource.mysql;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import site.wetsion.framework.dundunjob.datasource.JobInfo;
-import site.wetsion.framework.dundunjob.datasource.JobInfoLoader;
+import site.wetsion.framework.dundunjob.datasource.JobInfoDatasource;
 import site.wetsion.framework.dundunjob.datasource.mysql.dao.JobInfoDao;
 
 import javax.annotation.Resource;
 import java.util.List;
 
 @Component
-public class MysqlJobInfoLoader implements JobInfoLoader {
+@ConditionalOnProperty(prefix = "job.info", name = "datasource", havingValue = "mysql")
+public class MysqlJobInfoDatasource implements JobInfoDatasource {
     @Resource
     private JobInfoDao jobInfoDao;
     @Override

@@ -2,7 +2,7 @@ package site.wetsion.framework.dundunjob.datasource;
 
 import java.util.List;
 
-public interface JobInfoLoader {
+public interface JobInfoDatasource {
 
     JobInfo loadJobInfo(Long jobId);
 

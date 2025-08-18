@@ -11,13 +11,18 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class JobConsumeExecutor {
 
-    ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(
-            8,
-            8,
-            10, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(1000),
-            (r) -> new Thread(r, "JobConsumeExecutor"),
-            new ThreadPoolExecutor.AbortPolicy());
+    private ThreadPoolExecutor EXECUTOR;
+
+    public void start() {
+        EXECUTOR = new ThreadPoolExecutor(
+                8,
+                8,
+                10, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(1000),
+                (r) -> new Thread(r, "JobConsumeExecutor"),
+                new ThreadPoolExecutor.AbortPolicy());
+        EXECUTOR.prestartAllCoreThreads();
+    }
 
     public void stop() {
         EXECUTOR.shutdown();

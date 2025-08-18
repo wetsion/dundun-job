@@ -6,12 +6,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import site.wetsion.framework.dundunjob.cron.CronParser;
 import site.wetsion.framework.dundunjob.datasource.JobInfo;
-import site.wetsion.framework.dundunjob.datasource.JobInfoLoader;
+import site.wetsion.framework.dundunjob.datasource.JobInfoDatasource;
 import site.wetsion.framework.dundunjob.store.JobInstance;
 import site.wetsion.framework.dundunjob.store.JobStore;
 
 import javax.annotation.PostConstruct;
 import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,17 +28,11 @@ public class JobInstanceGeneratorThread {
     private final static Logger logger = org.slf4j.LoggerFactory.getLogger(JobInstanceGeneratorThread.class);
 
     @Autowired
-    private JobInfoLoader jobInfoLoader;
+    private JobInfoDatasource jobInfoDatasource;
     @Autowired
     private JobStore jobStore;
 
     private ScheduledExecutorService executorService;
-
-//    private static final JobInstanceGeneratorThread instance = new JobInstanceGeneratorThread();
-//
-//    public static JobInstanceGeneratorThread getInstance() {
-//        return instance;
-//    }
 
     @PostConstruct
     public void init() {
@@ -50,8 +45,15 @@ public class JobInstanceGeneratorThread {
 
     public void start() {
         executorService.scheduleAtFixedRate(() -> {
-            List<JobInfo> jobInfos = jobInfoLoader.loadAllJobInfo();
+            List<JobInfo> jobInfos;
+            try {
+                jobInfos = jobInfoDatasource.loadAllJobInfo();
+            } catch (Exception e) {
+                logger.error("获取job信息失败", e);
+                return;
+            }
             if (CollectionUtils.isEmpty(jobInfos)) {
+                logger.warn("no job info to generate job instance");
                 return;
             }
             for (JobInfo jobInfo : jobInfos) {
@@ -73,11 +75,11 @@ public class JobInstanceGeneratorThread {
         for (Long timestamp : timestamps) {
             System.out.println(timestamp);
             if (jobStore.isJobInstanceCached(jobInfo.getId(), timestamp)) {
-                System.out.println("已存在:" +  timestamp);
+                logger.info("触发时间已存在: {}",  new Date(timestamp));
                 continue;
             }
             try {
-                System.out.println(Thread.currentThread().getId() +"不存在就加入:" + timestamp);
+                logger.info("thread: {}, 触发时间 {} 缓存不存在", Thread.currentThread().getId(), new Date(timestamp));
                 // 缓存任务实例，用于去重
                 jobStore.cacheJobInstance(jobInfo.getId(), timestamp);
                 // 加入到待调度队列

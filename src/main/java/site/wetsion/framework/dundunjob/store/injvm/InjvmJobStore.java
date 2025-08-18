@@ -1,5 +1,7 @@
 package site.wetsion.framework.dundunjob.store.injvm;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import site.wetsion.framework.dundunjob.store.JobInstance;
 import site.wetsion.framework.dundunjob.store.JobStore;
@@ -17,6 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author wetsion
  */
 @Component
+@ConditionalOnProperty(prefix = "job.store", name = "impl", havingValue = "injvm")
 public class InjvmJobStore implements JobStore {
 
     /**
