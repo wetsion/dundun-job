@@ -62,6 +62,26 @@
             <artifactId>redisson-spring-boot-starter</artifactId>
             <version>3.16.4</version>
         </dependency>
+        <dependency>
+            <groupId>site.wetsion.framework</groupId>
+            <artifactId>elastic-search-assistant</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>site.wetsion.framework</groupId>
+            <artifactId>spanner</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.17.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
