@@ -14,7 +14,7 @@ public interface JobCacheConstant {
             "local zsetKey = KEYS[1]; " +
                     "local listKey = KEYS[2]; " +
                     "local currentTime = tonumber(ARGV[1]); " +
-                    "local expiredMembers=redis.call('ZRANGEBYSCORE', zsetKey, '0', currentTime); " +
+                    "local expiredMembers=redis.call('ZRANGEBYSCORE', zsetKey, '0', currentTime, 'LIMIT', '0', '10'); " +
                     "if #expiredMembers==0 then " +
                     "return 0; " +
                     "end; " +
