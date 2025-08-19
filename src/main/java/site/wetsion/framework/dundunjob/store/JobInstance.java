@@ -8,11 +8,13 @@ public class JobInstance implements Serializable, Comparable<JobInstance> {
     /**
      * 任务id
      */
-    private final Long jobId;
+    private Long jobId;
     /**
      * 触发执行时间
      */
-    private final Long timestamp;
+    private Long timestamp;
+
+    public JobInstance() {}
 
     public JobInstance(Long jobId, Long timestamp) {
         this.jobId = jobId;

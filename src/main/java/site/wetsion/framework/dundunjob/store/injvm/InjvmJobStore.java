@@ -3,6 +3,7 @@ package site.wetsion.framework.dundunjob.store.injvm;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import site.wetsion.framework.dundunjob.store.JobInstance;
 import site.wetsion.framework.dundunjob.store.JobStore;
 
@@ -22,6 +23,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @ConditionalOnProperty(prefix = "job.store", name = "impl", havingValue = "injvm")
 public class InjvmJobStore implements JobStore {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(InjvmJobStore.class);
+
     /**
      * 任务实例缓存
      */
@@ -36,6 +39,7 @@ public class InjvmJobStore implements JobStore {
     private final static TreeSet<JobInstance> WAIT_SCHEDULE_QUEUE = new TreeSet<>();
 
     private final Lock lock = new ReentrantLock();
+    private final Lock scheduleLock = new ReentrantLock();
 
     @Override
     public void cacheJobInstance(Long jobId, Long timestamp) {
@@ -63,8 +67,7 @@ public class InjvmJobStore implements JobStore {
         }));
     }
 
-    @Override
-    public void addJobToQueue(Long jobId) {
+    private void addJobToQueue(Long jobId) {
         CONSUME_QUEUE.offer(jobId);
     }
 
@@ -78,13 +81,34 @@ public class InjvmJobStore implements JobStore {
         }
     }
 
-    @Override
-    public List<JobInstance> popJobInstanceFromScheduleQueue(Long timestamp) {
+    private List<JobInstance> popJobInstanceFromScheduleQueue(Long timestamp) {
         SortedSet<JobInstance> headSet = WAIT_SCHEDULE_QUEUE.headSet(new JobInstance(null, timestamp));
         if (!headSet.isEmpty()) {
             return new ArrayList<>(headSet);
         }
         return Collections.emptyList();
+    }
+
+    @Override
+    public void scheduleJob(Long timestamp) {
+        if (scheduleLock.tryLock()) {
+            try {
+                List<JobInstance> jobInstances = popJobInstanceFromScheduleQueue(System.currentTimeMillis());
+                if (CollectionUtils.isEmpty(jobInstances)) {
+                    log.warn("no job instance to schedule");
+                    return;
+                }
+                for (JobInstance jobInstance : jobInstances) {
+                    try {
+                        addJobToQueue(jobInstance.getJobId());
+                    } catch (Exception e) {
+                        log.error("schedule job error", e);
+                    }
+                }
+            } finally {
+                scheduleLock.unlock();
+            }
+        }
     }
 
     @Override

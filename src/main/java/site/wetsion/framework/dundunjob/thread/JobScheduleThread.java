@@ -34,26 +34,11 @@ public class JobScheduleThread {
 
     public void start() {
         executorService.scheduleAtFixedRate(() -> {
-            List<JobInstance> jobInstances = jobStore.popJobInstanceFromScheduleQueue(System.currentTimeMillis());
-            if (CollectionUtils.isEmpty(jobInstances)) {
-                log.warn("no job instance to schedule");
-                return;
-            }
-            for (JobInstance jobInstance : jobInstances) {
-                scheduleJob(jobInstance);
-            }
+            jobStore.scheduleJob(System.currentTimeMillis());
         }, 0, 200, TimeUnit.MILLISECONDS);
     }
 
     public void stop() {
         executorService.shutdown();
-    }
-
-    private void scheduleJob(JobInstance jobInstance) {
-        try {
-            jobStore.addJobToQueue(jobInstance.getJobId());
-        } catch (Exception e) {
-            log.error("schedule job error", e);
-        }
     }
 }

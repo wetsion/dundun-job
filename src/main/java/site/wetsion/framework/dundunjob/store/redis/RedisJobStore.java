@@ -1,6 +1,8 @@
 package site.wetsion.framework.dundunjob.store.redis;
 
 import org.redisson.api.*;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.codec.JsonJacksonCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +12,7 @@ import site.wetsion.framework.dundunjob.store.JobInstance;
 import site.wetsion.framework.dundunjob.store.JobStore;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -25,15 +25,20 @@ public class RedisJobStore implements JobStore {
     private RedissonClient redissonClient;
 
     private RSet<String> jobInstanceCache;
-    private RBlockingQueue<Long> jobQueue;
+    private RBlockingQueue<JobInstance> jobQueue;
 
     private RScoredSortedSet<JobInstance> waitScheduleQueue;
+
+    private RScript script;
+
+    private List<Object> MOVE_JOB_SCRIPT_KEYS = Arrays.asList(JobCacheConstant.WAIT_SCHEDULE_QUEUE, JobCacheConstant.JOB_QUEUE);
 
     @PostConstruct
     private void init() {
         this.jobInstanceCache = redissonClient.getSet(JobCacheConstant.JOB_INSTANCE_CACHE);
         this.jobQueue = redissonClient.getBlockingQueue(JobCacheConstant.JOB_QUEUE);
         this.waitScheduleQueue = redissonClient.getScoredSortedSet(JobCacheConstant.WAIT_SCHEDULE_QUEUE);
+        this.script = redissonClient.getScript(StringCodec.INSTANCE);
     }
 
     @Override
@@ -55,29 +60,36 @@ public class RedisJobStore implements JobStore {
     }
 
     @Override
-    public void addJobToQueue(Long jobId) {
-        boolean r = jobQueue.offer(jobId);
-        if (!r) {
-            log.error("添加任务到队列失败, jobId: {}", jobId);
-        }
-    }
-
-    @Override
     public void addJobInstanceToScheduleQueue(JobInstance jobInstance) {
         waitScheduleQueue.add(jobInstance.getTimestamp(), jobInstance);
     }
 
     @Override
-    public List<JobInstance> popJobInstanceFromScheduleQueue(Long timestamp) {
-        Collection<JobInstance> jobInstances = waitScheduleQueue.valueRange(0, true, timestamp, true);
-        waitScheduleQueue.removeAll(jobInstances);
-        return new ArrayList<>(jobInstances);
+    public void scheduleJob(Long timestamp) {
+        try {
+            String now = String.valueOf(System.currentTimeMillis());
+            log.info("开始移动过期任务, now: {}", now);
+            Long movedCount = script.eval(
+                    RScript.Mode.READ_WRITE,
+                    JobCacheConstant.MOVE_EXPIRED_JOB_SCRIPT,
+                    RScript.ReturnType.INTEGER,
+                    MOVE_JOB_SCRIPT_KEYS,
+                    now
+            );
+            log.info("移动过期任务数量：{}", movedCount);
+        } catch (Exception e) {
+            log.error("移动过期任务异常", e);
+        }
     }
 
     @Override
     public Long consumeJobFromQueue() {
         try {
-            return jobQueue.take();
+            JobInstance jobInstance = jobQueue.take();
+            if (Objects.nonNull(jobInstance)) {
+                return jobInstance.getJobId();
+            }
+            return null;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -86,7 +98,11 @@ public class RedisJobStore implements JobStore {
     @Override
     public Long consumeJobFromQueue(Long time, TimeUnit timeUnit) {
         try {
-            return jobQueue.poll(time, timeUnit);
+            JobInstance jobInstance = jobQueue.poll(time, timeUnit);
+            if (Objects.nonNull(jobInstance)) {
+                return jobInstance.getJobId();
+            }
+            return null;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

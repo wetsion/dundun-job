@@ -26,23 +26,16 @@ public interface JobStore {
     void clearExpiredJobInstances();
 
     /**
-     * 添加任务到待消费队列
-     * @param jobId 任务id
-     */
-    void addJobToQueue(Long jobId);
-    /**
      * 添加任务实例到待调度队列
      * @param jobInstance 任务实例
      */
     void addJobInstanceToScheduleQueue(JobInstance jobInstance);
 
     /**
-     * 获取小于等于当前时间的任务实例
+     * 调度任务，将调度队列小于时间戳的任务加入待消费队列
      * @param timestamp 时间戳
-     * @return 任务实例
      */
-    List<JobInstance> popJobInstanceFromScheduleQueue(Long timestamp);
-
+    void scheduleJob(Long timestamp);
     /**
      * 从待调度队列中获取任务
      * @return 任务id
