@@ -22,7 +22,7 @@ public interface JobCacheConstant {
                     "redis.call('ZREM', zsetKey, expiredMembers[i]); " +
                     "end; " +
                     "for i=#expiredMembers,1,-1 do " +
-                    "redis.call('LPUSH', listKey, expiredMembers[i]); " +
+                    "redis.call('RPUSH', listKey, expiredMembers[i]); " +
                     "end; " +
                     "return #expiredMembers;";
 }
